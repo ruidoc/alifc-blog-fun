@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose')
 
 const usersSchema = new mongoose.Schema({
   phone: {
@@ -14,17 +14,22 @@ const usersSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  avatar: {
+    type: String,
+    default:
+      'https://p3-passport.byteimg.com/img/user-avatar/ce0d388154616b47e913082f936c65fa~100x100.awebp',
+  },
   introduc: {
     type: String,
     required: true,
   },
   position: {
     type: String,
-    default: "",
+    default: '',
   },
   company: {
     type: String,
-    default: "",
+    default: '',
   },
   jue_power: {
     type: Number,
@@ -38,7 +43,7 @@ const usersSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
-});
-const Model = mongoose.model("users", usersSchema);
+})
+const Model = mongoose.model('users', usersSchema)
 
-module.exports = Model;
+module.exports = Model
