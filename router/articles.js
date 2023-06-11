@@ -28,7 +28,11 @@ router.post('/publish/:id', async (req, res, next) => {
   let { id } = req.params
   try {
     let result = await ArtsModel.findByIdAndUpdate(id, { status: 1 })
-    res.send(result)
+    if (result) {
+      res.send({ message: '发布成功' })
+    } else {
+      res.status(400).send({ message: '文档未找到，发布失败' })
+    }
   } catch (err) {
     next(err)
   }
@@ -66,8 +70,12 @@ router.put('/update/:id', async (req, res, next) => {
       })
     }
     body.updated_at = new Date()
-    await ArtsModel.findByIdAndUpdate(id, body)
-    res.send({ message: '更新成功' })
+    let result = await ArtsModel.findByIdAndUpdate(id, body)
+    if (result) {
+      res.send({ message: '更新成功' })
+    } else {
+      res.status(400).send({ message: '更新失败，文章ID错误' })
+    }
   } catch (err) {
     next(err)
   }

@@ -68,8 +68,12 @@ router.put('/update/:id', async (req, res, next) => {
         message: '请传入要更新的数据',
       })
     }
-    await UsersModel.findByIdAndUpdate(id, body)
-    res.send({ message: '更新成功' })
+    let result = await UsersModel.findByIdAndUpdate(id, body)
+    if (result) {
+      res.send({ message: '更新成功' })
+    } else {
+      res.status(400).send({ message: '更新失败，用户ID错误' })
+    }
   } catch (err) {
     next(err)
   }
