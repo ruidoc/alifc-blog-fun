@@ -1,5 +1,9 @@
 const categories = [
   {
+    key: 'all',
+    label: '综合',
+  },
+  {
     key: 'frontend',
     label: '前端',
   },

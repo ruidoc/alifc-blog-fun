@@ -13,9 +13,9 @@ router.post('/create', async (req, res, next) => {
   }
 })
 
-// 创建消息
+// 消息列表
 router.get('/lists', async (req, res, next) => {
-  let { user_id } = req.query
+  let user_id = req.auth._id
   try {
     let result = await MessModel.aggregate([
       { $match: { user_id: ObjectId(user_id), status: 0 } },
@@ -35,7 +35,7 @@ router.get('/lists', async (req, res, next) => {
       comment: rsinfo['type1'] || 0,
       praise: rsinfo['type2'] || 0,
       follow: rsinfo['type3'] || 0,
-      total: result.reduce((a, b) => a.count + b.count),
+      total: result.reduce((a, b) => a + b.count, 0),
     }
     res.send(resjson)
   } catch (err) {

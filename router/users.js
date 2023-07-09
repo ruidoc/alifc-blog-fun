@@ -1,6 +1,7 @@
 var express = require('express')
 var router = express.Router()
 var UsersModel = require('../model/users')
+var FollowsModel = require('../model/follows')
 var encrypt = require('../utils/crypto')
 const { genoJwt } = require('../utils/jwt')
 
@@ -23,6 +24,33 @@ router.post('/create', async (req, res, next) => {
   }
 })
 
+// 获取用户信息
+router.get('/info/:id', async (req, res, next) => {
+  let { id } = req.params
+  if (id == 'self') {
+    if (!req.auth) {
+      return res.status(401).send({ message: '请登录' })
+    }
+    id = req.auth._id
+  }
+  try {
+    let result = await UsersModel.findById(id)
+    let follows = await Promise.all([
+      FollowsModel.count({ user_id: ObjectId(id) }),
+      FollowsModel.count({ fans_id: ObjectId(id) }),
+    ])
+    result = JSON.parse(JSON.stringify(result))
+    delete result.password
+    res.send({
+      ...result,
+      follow_num: follows[0],
+      fans_num: follows[1],
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // 用户登录
 router.post('/login', async (req, res, next) => {
   let body = req.body
@@ -38,7 +66,6 @@ router.post('/login', async (req, res, next) => {
       let token = genoJwt({ _id, username })
       res.send({
         code: 200,
-        data: result,
         token: token,
       })
     } else {

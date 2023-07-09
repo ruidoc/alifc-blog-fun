@@ -1,5 +1,6 @@
 const express = require('express')
 const bodyParser = require('body-parser')
+const cors = require('cors')
 const mongoInit = require('./config/mongo')
 const routerInit = require('./config/router')
 const { verifyJwt } = require('./utils/jwt')
@@ -7,6 +8,7 @@ const app = express()
 const port = 9000
 
 app.use(bodyParser.json())
+app.use(cors())
 
 app.use(
   verifyJwt().unless({

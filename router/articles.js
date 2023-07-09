@@ -1,8 +1,8 @@
 var express = require('express')
 var router = express.Router()
-const { Types } = require('mongoose')
 var ArtsModel = require('../model/articles')
 var UsersModel = require('../model/users')
+var { categories } = require('../config/static')
 
 router.all('/', (req, res) => {
   res.send('文章管理API')
@@ -10,13 +10,11 @@ router.all('/', (req, res) => {
 
 // 新建文章
 router.post('/create', async (req, res, next) => {
+  let created_by = req.auth._id
   let body = req.body
   try {
+    body.created_by = created_by
     let result = await ArtsModel.create(body)
-    let { created_by } = body
-    await UsersModel.findByIdAndUpdate(created_by, {
-      $inc: { jue_power: 10 },
-    })
     res.send(result)
   } catch (err) {
     next(err)
@@ -26,9 +24,16 @@ router.post('/create', async (req, res, next) => {
 // 发布文章
 router.post('/publish/:id', async (req, res, next) => {
   let { id } = req.params
+  let created_by = req.auth._id
   try {
-    let result = await ArtsModel.findByIdAndUpdate(id, { status: 1 })
+    let result = await ArtsModel.findByIdAndUpdate(id, {
+      status: 1,
+      created_at: new Date(),
+    })
     if (result) {
+      await UsersModel.findByIdAndUpdate(created_by, {
+        $inc: { jue_power: 10 },
+      })
       res.send({ message: '发布成功' })
     } else {
       res.status(400).send({ message: '文档未找到，发布失败' })
@@ -82,13 +87,24 @@ router.put('/update/:id', async (req, res, next) => {
 })
 
 // 文章列表
-router.get('/list', async (req, res, next) => {
-  let user_id = req.auth._id
+router.get('/lists', async (req, res, next) => {
+  let user_id = req.auth ? req.auth._id : null
+  let { category, orderby, per_page, page } = req.query
   try {
+    per_page = +per_page || 10
+    page = +page || 1
+    let skip = (page - 1) * per_page
+    orderby = orderby || 'new'
+    if (!['new', 'hot'].includes(orderby)) {
+      return res.status(400).send({ message: 'orderby 参数错误' })
+    }
     let where = {
       status: 1,
-      ...req.query,
     }
+    if (category) {
+      where.category = category
+    }
+    let total = await ArtsModel.count(where).skip(skip)
     let result = await ArtsModel.aggregate([
       {
         $match: where,
@@ -99,56 +115,6 @@ router.get('/list', async (req, res, next) => {
           localField: '_id',
           foreignField: 'source_id',
           as: 'comments',
-        },
-      },
-      {
-        $lookup: {
-          from: 'praises',
-          localField: '_id',
-          foreignField: 'target_id',
-          as: 'praises',
-        },
-      },
-      {
-        $addFields: {
-          praises: {
-            $filter: {
-              input: '$praises',
-              as: 'arrs',
-              cond: { $eq: ['$$arrs.type', 1] },
-            },
-          },
-          comments: {
-            $size: '$comments',
-          },
-        },
-      },
-      {
-        $addFields: {
-          is_praise: {
-            $in: [ObjectId(user_id), '$praises.created_by'],
-          },
-          praises: {
-            $size: '$praises',
-          },
-        },
-      },
-    ])
-    res.send(result)
-  } catch (err) {
-    next(err)
-  }
-})
-
-// 文章详情
-router.get('/detail/:id', async (req, res, next) => {
-  let { id } = req.params
-  let { user_id } = req.query
-  try {
-    let result = await ArtsModel.aggregate([
-      {
-        $match: {
-          _id: ObjectId(id),
         },
       },
       {
@@ -175,6 +141,88 @@ router.get('/detail/:id', async (req, res, next) => {
               as: 'arrs',
               cond: { $eq: ['$$arrs.type', 1] },
             },
+          },
+          comments: {
+            $size: '$comments',
+          },
+        },
+      },
+      {
+        $addFields: {
+          is_praise: {
+            $in: [ObjectId(user_id), '$praises.created_by'],
+          },
+          praises: {
+            $size: '$praises',
+          },
+          user: {
+            $first: '$user',
+          },
+        },
+      },
+      {
+        $unset: ['user.password', 'user.__v'],
+      },
+    ])
+    res.send({
+      meta: {
+        total,
+        page,
+        per_page,
+      },
+      data: result,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// 文章详情
+router.get('/detail/:id', async (req, res, next) => {
+  let { id } = req.params
+  let user_id = req.auth ? req.auth._id : null
+  try {
+    let result = await ArtsModel.aggregate([
+      {
+        $match: {
+          _id: ObjectId(id),
+        },
+      },
+      {
+        $lookup: {
+          from: 'praises',
+          localField: '_id',
+          foreignField: 'target_id',
+          as: 'praises',
+        },
+      },
+      {
+        $lookup: {
+          from: 'comments',
+          localField: '_id',
+          foreignField: 'source_id',
+          as: 'comments',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $addFields: {
+          praises: {
+            $filter: {
+              input: '$praises',
+              as: 'arrs',
+              cond: { $eq: ['$$arrs.type', 1] },
+            },
+          },
+          comments: {
+            $size: '$comments',
           },
           stars: {
             $filter: {
@@ -212,6 +260,11 @@ router.get('/detail/:id', async (req, res, next) => {
   } catch (err) {
     next(err)
   }
+})
+
+// 返回分类
+router.get('/category', async (req, res, next) => {
+  res.json(categories)
 })
 
 module.exports = router

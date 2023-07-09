@@ -3,13 +3,30 @@ const { ObjectId } = mongoose.Types
 const { categories } = require('../config/static')
 
 const articlesSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  intro: { type: String, required: true },
-  content: { type: String, required: true },
+  title: {
+    type: String,
+    required() {
+      return this.type == 1
+    },
+  },
+  intro: {
+    type: String,
+    required() {
+      return this.type == 1
+    },
+  },
+  content: {
+    type: String,
+    required() {
+      return this.type == 1
+    },
+  },
   category: {
     type: String,
     enum: categories.map(cate => cate.key),
-    required: true,
+    required() {
+      return this.type == 1
+    },
   },
   status: {
     type: Number,

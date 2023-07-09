@@ -10,12 +10,14 @@ router.all('/', (req, res) => {
 
 // 添加/取消点赞或收藏
 router.post('/toggle', async (req, res, next) => {
+  let created_by = req.auth._id
   let body = req.body
   try {
-    let { target_user, target_id, created_by, target_type } = body
-    if (!target_id || !target_type || !target_user || !created_by) {
+    let { target_user, target_id, target_type } = body
+    if (!target_id || !target_type || !target_user) {
       return res.status(400).send({ message: '参数缺失' })
     }
+    body.created_by = created_by
     let action = 'delete'
     let result = await PraisModel.findOneAndDelete(body)
     if (!result) {

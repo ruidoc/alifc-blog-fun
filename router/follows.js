@@ -102,4 +102,19 @@ router.get('/lists', async (req, res, next) => {
   }
 })
 
+// 统计关注与粉丝
+router.get('/preview', async (req, res, next) => {
+  let user_id = req.auth._id
+  try {
+    let fans_count = await FollowsModel.count({ user_id: ObjectId(user_id) })
+    let follow_count = await FollowsModel.count({ fans_id: ObjectId(user_id) })
+    res.send({
+      fans_count,
+      follow_count,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 module.exports = router
