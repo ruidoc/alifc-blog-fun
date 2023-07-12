@@ -35,6 +35,10 @@ const categories = [
 
 const groups = [
   {
+    key: 'all',
+    label: '综合',
+  },
+  {
     key: 'daily',
     label: '打工日常',
   },

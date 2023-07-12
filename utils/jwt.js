@@ -7,6 +7,8 @@ const SECRET_KEY = 'alifn_jueblog_jwt_8756'
 const unless = [
   '/arts/lists',
   '/arts/category',
+  '/stmsgs/group',
+  '/stmsgs/lists',
   /\/arts\/detail*/,
   /\/users\/info*/,
 ]
@@ -44,6 +46,8 @@ function verifyJwt() {
         return 'token error'
       }
     },
+  }).unless({
+    path: ['/users/create', '/users/login'],
   })
 }
 module.exports = {

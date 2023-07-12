@@ -13,8 +13,8 @@ router.post('/create', async (req, res, next) => {
   }
 })
 
-// 消息列表
-router.get('/lists', async (req, res, next) => {
+// 消息统计
+router.get('/preview', async (req, res, next) => {
   let user_id = req.auth._id
   try {
     let result = await MessModel.aggregate([

@@ -1,6 +1,7 @@
 var express = require('express')
 var router = express.Router()
 var StmsgsModel = require('../model/shortmsgs')
+var { groups } = require('../config/static')
 
 router.all('/', (req, res) => {
   res.send('沸点API')
@@ -9,7 +10,9 @@ router.all('/', (req, res) => {
 // 创建沸点
 router.post('/create', async (req, res, next) => {
   let body = req.body
+  let user_id = req.auth._id
   try {
+    body.created_by = user_id
     let result = await StmsgsModel.create(body)
     res.send(result)
   } catch (err) {
@@ -52,6 +55,14 @@ router.get('/lists', async (req, res, next) => {
         },
       },
       {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
         $addFields: {
           is_praise: {
             $in: [ObjectId(user_id), '$praises.created_by'],
@@ -62,7 +73,13 @@ router.get('/lists', async (req, res, next) => {
           comments: {
             $size: '$comments',
           },
+          user: {
+            $first: '$user',
+          },
         },
+      },
+      {
+        $unset: ['user.password', 'user.__v'],
       },
       {
         $sort:
@@ -99,6 +116,11 @@ router.delete('/remove/:id', async (req, res, next) => {
   } catch (err) {
     next(err)
   }
+})
+
+// 返回分类
+router.get('/group', async (req, res, next) => {
+  res.json(groups)
 })
 
 module.exports = router

@@ -45,7 +45,7 @@ router.delete('/remove/:id', async (req, res, next) => {
   }
 })
 
-// 获取评论列表
+// 获取文章评论列表
 router.get('/list/:source_id', async (req, res, next) => {
   let { source_id } = req.params
   try {
@@ -87,6 +87,73 @@ router.get('/list/:source_id', async (req, res, next) => {
         }
       })
     res.send(result)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// 获取我的评论列表
+router.get('/mylist', async (req, res, next) => {
+  let user_id = req.auth._id
+  let { per_page, page } = req.query
+  try {
+    per_page = +per_page || 10
+    page = +page || 1
+    let skip = (page - 1) * per_page
+    let where = { target_user: ObjectId(user_id) }
+    let total = await CommsModel.count(where)
+    let lists = await CommsModel.aggregate([
+      { $match: where },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $lookup: {
+          from: 'articles',
+          localField: 'source_id',
+          foreignField: '_id',
+          as: 'article',
+        },
+      },
+      {
+        $lookup: {
+          from: 'shortmsgs',
+          localField: 'source_id',
+          foreignField: '_id',
+          as: 'shortmsg',
+        },
+      },
+      {
+        $addFields: {
+          article: {
+            $first: '$article',
+          },
+          shortmsg: {
+            $first: '$shortmsg',
+          },
+          user: {
+            $first: '$user',
+          },
+        },
+      },
+      { $skip: skip },
+      {
+        $limit: per_page,
+      },
+    ])
+    res.send({
+      meta: {
+        total,
+        page,
+        per_page,
+      },
+      data: lists,
+    })
   } catch (err) {
     next(err)
   }

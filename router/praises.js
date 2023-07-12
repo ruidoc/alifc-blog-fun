@@ -41,4 +41,71 @@ router.post('/toggle', async (req, res, next) => {
   }
 })
 
+// 获取我的赞和收藏列表
+router.get('/mylist', async (req, res, next) => {
+  let user_id = req.auth._id
+  let { per_page, page } = req.query
+  try {
+    per_page = +per_page || 10
+    page = +page || 1
+    let skip = (page - 1) * per_page
+    let where = { target_user: ObjectId(user_id) }
+    let total = await PraisModel.count(where)
+    let lists = await PraisModel.aggregate([
+      { $match: where },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      {
+        $lookup: {
+          from: 'articles',
+          localField: 'target_id',
+          foreignField: '_id',
+          as: 'article',
+        },
+      },
+      {
+        $lookup: {
+          from: 'shortmsgs',
+          localField: 'target_id',
+          foreignField: '_id',
+          as: 'shortmsg',
+        },
+      },
+      {
+        $addFields: {
+          article: {
+            $first: '$article',
+          },
+          shortmsg: {
+            $first: '$shortmsg',
+          },
+          user: {
+            $first: '$user',
+          },
+        },
+      },
+      { $skip: skip },
+      {
+        $limit: per_page,
+      },
+    ])
+    res.send({
+      meta: {
+        total,
+        page,
+        per_page,
+      },
+      data: lists,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 module.exports = router

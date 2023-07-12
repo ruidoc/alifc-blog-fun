@@ -10,12 +10,14 @@ router.all('/', (req, res) => {
 // 关注用户
 router.post('/toggle', async (req, res, next) => {
   let body = req.body
+  let fans_id = req.auth._id
   try {
-    let { user_id, fans_id } = body
+    let { user_id } = body
     if (!user_id || !fans_id) {
       return res.status(400).send({ message: '参数缺失' })
     }
     let action = 'delete'
+    body.fans_id = fans_id
     let result = await FollowsModel.findOneAndDelete(body)
     if (!result) {
       action = 'create'
@@ -38,12 +40,16 @@ router.post('/toggle', async (req, res, next) => {
 // 获取关注列表
 router.get('/lists', async (req, res, next) => {
   let user_id = req.auth._id
+  let { per_page, page } = req.query
   try {
+    per_page = +per_page || 10
+    page = +page || 1
+    let skip = (page - 1) * per_page
+    let where = { user_id: ObjectId(user_id) }
+    let total = await FollowsModel.count(where)
     let result = await FollowsModel.aggregate([
       {
-        $match: {
-          user_id: ObjectId(user_id),
-        },
+        $match: where,
       },
       {
         $lookup: {
@@ -95,8 +101,19 @@ router.get('/lists', async (req, res, next) => {
           'fans_info.read_num',
         ],
       },
+      { $skip: skip },
+      {
+        $limit: per_page,
+      },
     ])
-    res.send(result)
+    res.send({
+      meta: {
+        total,
+        page,
+        per_page,
+      },
+      data: result,
+    })
   } catch (err) {
     next(err)
   }
@@ -112,6 +129,21 @@ router.get('/preview', async (req, res, next) => {
       fans_count,
       follow_count,
     })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// 是否关注某用户
+router.post('/is-follow', async (req, res, next) => {
+  let fans_id = req.auth._id
+  let { user_id } = req.body
+  try {
+    let count = await FollowsModel.count({
+      user_id: ObjectId(user_id),
+      fans_id: ObjectId(fans_id),
+    })
+    res.send(count == 0 ? false : true)
   } catch (err) {
     next(err)
   }

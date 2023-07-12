@@ -2,12 +2,11 @@ const mongoose = require('mongoose')
 
 const connect = (req, res, next) => {
   mongoose
-    .connect('mongodb://112.126.64.221:11027/juejin_blogs', {
+    .connect('mongodb://123.57.41.105:27017/juejin_blogs', {
       user: 'ruidoc',
       pass: 'z7h47suy5h8e',
     })
     .then(() => {
-      console.log('数据库连接成功')
       next()
     })
     .catch(err => {

@@ -43,8 +43,8 @@ router.get('/info/:id', async (req, res, next) => {
     delete result.password
     res.send({
       ...result,
-      follow_num: follows[0],
-      fans_num: follows[1],
+      fans_num: follows[0],
+      follow_num: follows[1],
     })
   } catch (err) {
     next(err)

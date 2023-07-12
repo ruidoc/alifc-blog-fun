@@ -163,6 +163,14 @@ router.get('/lists', async (req, res, next) => {
       {
         $unset: ['user.password', 'user.__v'],
       },
+      {
+        $sort:
+          orderby == 'new' ? { created_at: -1 } : { comments: -1, praises: -1 },
+      },
+      { $skip: skip },
+      {
+        $limit: per_page,
+      },
     ])
     res.send({
       meta: {
@@ -256,7 +264,17 @@ router.get('/detail/:id', async (req, res, next) => {
         $unset: ['user.password', 'user.__v'],
       },
     ])
-    res.send(result[0])
+    if (result.length > 0) {
+      await ArtsModel.findByIdAndUpdate(id, {
+        $inc: { page_view: 1 },
+      })
+      await UsersModel.findByIdAndUpdate(result[0].created_by, {
+        $inc: { read_num: 1 },
+      })
+      res.send(result[0])
+    } else {
+      res.status(400).send({ message: '文章不存在' })
+    }
   } catch (err) {
     next(err)
   }
